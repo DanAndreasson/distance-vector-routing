@@ -1,6 +1,5 @@
 import javax.swing.*;
 import java.util.Arrays;
-import java.lang.Math;
 
 public class RouterNode {
   private int id;
@@ -44,6 +43,14 @@ public class RouterNode {
     }
   } 
 
+  public void updateLinkCost(int dest, int newcost) {
+    // System.out.printf("-- Link cost change between %s and %s now costs %3s \n", id, dest, newcost);
+    costs[dest] = newcost;
+    distanceVector[id][dest] = newcost;
+
+    broadcastUpdate();
+  }
+
   public void recvUpdate(RouterPacket packet) {
     int fromNode = packet.sourceid;
     boolean changes = false;
@@ -54,16 +61,31 @@ public class RouterNode {
     // Loop through our distanceVector and maybe update it
     for (int node = 0; node < distanceVector[id].length; ++node) {
       if (node == id) continue;
+      // System.out.println();
 
-      int newCost = Math.min(
-          costs[fromNode] + distanceVector[fromNode][node],
-          distanceVector[id][node]
-          );
+      // Loop through all neighbors again
+      // Does anyone have a cheaper route to node? 
+      int newCost = RouterSimulator.INFINITY;
+      for( int nbr = 0; nbr < costs.length; ++nbr) {
+        if (nbr == id || costs[nbr] == RouterSimulator.INFINITY){
+          continue;
+        }
+        int costThroughNbr = costs[nbr] + distanceVector[nbr][node];  
+
+        if(costThroughNbr < newCost) {
+          // System.out.println("  På " + id + " Billigast genom " + nbr + " till " + node + " för " + costThroughNbr);
+          newCost = costThroughNbr;
+        }
+      }
 
       if(newCost != distanceVector[id][node]) {
+        // System.out.printf("newCost %-5s In node: %-5s To: %-5s Got DV: %-10s from %-5s My Cost %-10s\n", newCost, id, node, Arrays.toString(distanceVector[fromNode]), fromNode, Arrays.toString(costs));
         distanceVector[id][node] = newCost;
         changes = true;
       }
+      // else {
+      //   System.out.printf("stay at %-5s In node: %-5s To: %-5s Got DV: %-10s from %-5s My Cost %-10s\n", distanceVector[id][node], id, node, Arrays.toString(distanceVector[fromNode]), fromNode, Arrays.toString(costs));
+      // }
     }
 
     if (changes)
@@ -126,8 +148,5 @@ public class RouterNode {
 
     gui.println();
     gui.println(divider);
-  }
-
-  public void updateLinkCost(int dest, int newcost) {
   }
 }
