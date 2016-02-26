@@ -85,17 +85,15 @@ public class RouterNode {
     gui.println("\nDistancetable:");
     printHeader();
 
-    int node = 0;
-    for(int[] nbr : distanceVector) {
-      if(node == id) continue;
+    for(int node = 0; node < costs.length; ++node) {
+      if(node == id || costs[node] == RouterSimulator.INFINITY) continue;
 
       gui.print(" nbr  " + node + " |");
 
-      for(int distance : nbr) {
+      for(int distance : distanceVector[node]) {
         gui.print(String.format("%10d", distance));
       }
       gui.println();
-      ++node;
     }
   }
 
