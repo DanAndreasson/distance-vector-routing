@@ -32,7 +32,6 @@ public class RouterNode {
         route.put(node, node);
     }
 
-
     // It costs zero to ourself
     distanceVector[id][id] = 0;
 
