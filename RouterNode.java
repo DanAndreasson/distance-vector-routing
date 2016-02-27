@@ -1,5 +1,7 @@
 import javax.swing.*;
 import java.util.Arrays;
+import java.util.Map;
+import java.util.HashMap;
 
 public class RouterNode {
   private int id;
@@ -7,6 +9,9 @@ public class RouterNode {
   private RouterSimulator simulator;
   private int[] costs = new int[RouterSimulator.NUM_NODES];
   private int[][] distanceVector = new int[RouterSimulator.NUM_NODES][RouterSimulator.NUM_NODES];
+  // Route will keep track of which router we route through to get to a neighbor
+  private Map<Integer, Integer> route = new HashMap<>();
+  private boolean POISONREVERSE = true;
 
   public RouterNode(int id, RouterSimulator sim, int[] costs) {
     this.id = id;
@@ -22,7 +27,11 @@ public class RouterNode {
 
     for(int node = 0; node < costs.length; ++node) {
       distanceVector[id][node] = costs[node];
+
+      if(node != id && costs[node] != RouterSimulator.INFINITY)
+        route.put(node, node);
     }
+
 
     // It costs zero to ourself
     distanceVector[id][id] = 0;
@@ -31,22 +40,25 @@ public class RouterNode {
   }
 
   private void broadcastUpdate() {
-    for (int node = 0; node < costs.length; ++node) {
-      // Only send to neighbors
-      if(node == id || costs[node] == RouterSimulator.INFINITY) {
-        continue;
+    route.forEach((dest, through) -> {
+      int[] dv = distanceVector[id].clone();
+
+      if (POISONREVERSE) {
+        route.forEach((d, t) -> {
+          if(d != dest && route.get(d) == dest)
+            dv[dest] = RouterSimulator.INFINITY;
+        });
       }
 
-      // Send our distanceVector (route) to all neighbors
-      RouterPacket packet = new RouterPacket(id, node, distanceVector[id]);
+      RouterPacket packet = new RouterPacket(id, dest, dv);
       sendUpdate(packet);
-    }
-  } 
+    });
+  }
 
   public void updateLinkCost(int dest, int newcost) {
-    // System.out.printf("-- Link cost change between %s and %s now costs %3s \n", id, dest, newcost);
     costs[dest] = newcost;
     distanceVector[id][dest] = newcost;
+    route.put(dest, dest);
 
     broadcastUpdate();
   }
@@ -55,17 +67,16 @@ public class RouterNode {
     int fromNode = packet.sourceid;
     boolean changes = false;
 
-    // Update the senders distanceVector
-    distanceVector[fromNode] = (int[]) packet.mincost.clone();
+    distanceVector[fromNode] = packet.mincost.clone();
 
     // Loop through our distanceVector and maybe update it
     for (int node = 0; node < distanceVector[id].length; ++node) {
       if (node == id) continue;
-      // System.out.println();
 
-      // Loop through all neighbors again
       // Does anyone have a cheaper route to node? 
+      // Do not check my own DV and only direct neighbors
       int newCost = RouterSimulator.INFINITY;
+      int throughNode = -1;
       for( int nbr = 0; nbr < costs.length; ++nbr) {
         if (nbr == id || costs[nbr] == RouterSimulator.INFINITY){
           continue;
@@ -73,19 +84,16 @@ public class RouterNode {
         int costThroughNbr = costs[nbr] + distanceVector[nbr][node];  
 
         if(costThroughNbr < newCost) {
-          // System.out.println("  På " + id + " Billigast genom " + nbr + " till " + node + " för " + costThroughNbr);
           newCost = costThroughNbr;
+          throughNode = nbr;
         }
       }
 
       if(newCost != distanceVector[id][node]) {
-        // System.out.printf("newCost %-5s In node: %-5s To: %-5s Got DV: %-10s from %-5s My Cost %-10s\n", newCost, id, node, Arrays.toString(distanceVector[fromNode]), fromNode, Arrays.toString(costs));
         distanceVector[id][node] = newCost;
+        route.put(node, throughNode);
         changes = true;
       }
-      // else {
-      //   System.out.printf("stay at %-5s In node: %-5s To: %-5s Got DV: %-10s from %-5s My Cost %-10s\n", distanceVector[id][node], id, node, Arrays.toString(distanceVector[fromNode]), fromNode, Arrays.toString(costs));
-      // }
     }
 
     if (changes)
