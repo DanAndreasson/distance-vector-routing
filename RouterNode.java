@@ -11,7 +11,7 @@ public class RouterNode {
   private int[][] distanceVector = new int[RouterSimulator.NUM_NODES][RouterSimulator.NUM_NODES];
   // Route will keep track of which router we route through to get to a neighbor
   private Map<Integer, Integer> route = new HashMap<>();
-  private boolean POISONREVERSE = false;
+  private boolean POISONREVERSE = true;
   private int packagesSent = 0;
   private int packagesReceived = 0;
 
@@ -40,36 +40,25 @@ public class RouterNode {
     broadcastUpdate();
   }
 
-  private void broadcastUpdate() {
-    route.forEach((dest, through) -> {
-      int[] dv = distanceVector[id].clone();
-
-      if (POISONREVERSE) {
-        route.forEach((d, t) -> {
-          if(d != dest && route.get(d) == dest){
-            System.out.printf("%s Lies to %s and tells that %s -> %s is INFINITY because %s routes via %s in order to get to %s. (Actual cost: %s)\n", id, dest, id, d, id, d, dest, costs[d]);
-            dv[d] = RouterSimulator.INFINITY;
-          }
-        });
-      }
-
-      RouterPacket packet = new RouterPacket(id, dest, dv);
-      sendUpdate(packet);
-    });
-  }
-
   public void updateLinkCost(int dest, int newcost) {
     costs[dest] = newcost;
     System.out.printf("LINK COST CHANGE! %s -> %s now costs %s\n", id, dest, newcost);
-    broadcastUpdate();
+    calculateCheapest();
   }
 
   public void recvUpdate(RouterPacket packet) {
     ++packagesReceived;
-    int fromNode = packet.sourceid;
-    boolean changes = false;
+    distanceVector[packet.sourceid] = packet.mincost.clone();
+    calculateCheapest();
+  }
 
-    distanceVector[fromNode] = packet.mincost.clone();
+  private void sendUpdate(RouterPacket pkt) {
+    ++packagesSent;
+    simulator.toLayer2(pkt);
+  }
+
+  private void calculateCheapest() {
+    boolean changes = false;
 
     // Loop through our distanceVector and maybe update it
     for (int node = 0; node < distanceVector[id].length; ++node) {
@@ -104,9 +93,22 @@ public class RouterNode {
       broadcastUpdate();
   }
 
-  private void sendUpdate(RouterPacket pkt) {
-    ++packagesSent;
-    simulator.toLayer2(pkt);
+  private void broadcastUpdate() {
+    route.forEach((dest, through) -> {
+      int[] dv = distanceVector[id].clone();
+
+      if (POISONREVERSE) {
+        route.forEach((d, t) -> {
+          if(d != dest && route.get(d) == dest){
+            System.out.printf("%s Lies to %s and tells that %s -> %s is INFINITY because %s routes via %s in order to get to %s. (Actual cost: %s)\n", id, dest, id, d, id, d, dest, costs[d]);
+            dv[d] = RouterSimulator.INFINITY;
+          }
+        });
+      }
+
+      RouterPacket packet = new RouterPacket(id, dest, dv);
+      sendUpdate(packet);
+    });
   }
 
   public void printDistanceTable() {
