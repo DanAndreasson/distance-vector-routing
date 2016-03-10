@@ -11,7 +11,9 @@ public class RouterNode {
   private int[][] distanceVector = new int[RouterSimulator.NUM_NODES][RouterSimulator.NUM_NODES];
   // Route will keep track of which router we route through to get to a neighbor
   private Map<Integer, Integer> route = new HashMap<>();
-  private boolean POISONREVERSE = true;
+  private boolean POISONREVERSE = false;
+  private int packagesSent = 0;
+  private int packagesReceived = 0;
 
   public RouterNode(int id, RouterSimulator sim, int[] costs) {
     this.id = id;
@@ -44,8 +46,10 @@ public class RouterNode {
 
       if (POISONREVERSE) {
         route.forEach((d, t) -> {
-          if(d != dest && route.get(d) == dest)
-            dv[dest] = RouterSimulator.INFINITY;
+          if(d != dest && route.get(d) == dest){
+            System.out.printf("%s Lies to %s and tells that %s -> %s is INFINITY because %s routes via %s in order to get to %s. (Actual cost: %s)\n", id, dest, id, d, id, d, dest, costs[d]);
+            dv[d] = RouterSimulator.INFINITY;
+          }
         });
       }
 
@@ -58,11 +62,13 @@ public class RouterNode {
     costs[dest] = newcost;
     distanceVector[id][dest] = newcost;
     route.put(dest, dest);
+    System.out.printf("LINK COST CHANGE! %s -> %s now costs %s\n", id, dest, newcost);
 
     broadcastUpdate();
   }
 
   public void recvUpdate(RouterPacket packet) {
+    ++packagesReceived;
     int fromNode = packet.sourceid;
     boolean changes = false;
 
@@ -100,6 +106,7 @@ public class RouterNode {
   }
 
   private void sendUpdate(RouterPacket pkt) {
+    ++packagesSent;
     simulator.toLayer2(pkt);
   }
 
@@ -130,18 +137,24 @@ public class RouterNode {
     gui.println("\nOur distance vector and routes:");
     printHeader();
 
-    gui.print(String.format(" %8s|", "cost"));
+    gui.print(String.format(" %7s |", "cost"));
 
     for(int cost : costs) {
       gui.print(String.format("%10s", cost));
     }
 
     gui.println();
-    gui.print(String.format(" %8s|", "route"));
+    gui.print(String.format(" %7s |", "route"));
 
     for(int cost : distanceVector[id]) {
       gui.print(String.format("%10d", cost));
     }
+
+    gui.println();
+    gui.print(String.format(" %7s | %10d", "recvd", packagesReceived));
+
+    gui.println();
+    gui.print(String.format(" %7s | %10d", "sent", packagesSent));
   }
 
   private void printHeader() {
