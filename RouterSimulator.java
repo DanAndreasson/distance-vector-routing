@@ -14,12 +14,12 @@ Output GUIs added by Ch. Schuba 2007.
 
 public class RouterSimulator {
 
-  public static final int NUM_NODES = 4;
+  public static final int NUM_NODES = 3;
   public static final int INFINITY = 999;
 
   public static final boolean LINKCHANGES = true;
 
-  public int TRACE = 1;             /* for debugging */
+  public int TRACE = 3;             /* for debugging */
 
   private GuiTextArea myGUI = null;
 
@@ -83,18 +83,12 @@ should not have to, and you defeinitely should not have to modify
 
     /* set initial costs */
     // remember that in java everything defaults to 0
-    connectcosts[0][1]=1;  
-    connectcosts[0][2]=3;
-    connectcosts[0][3]=7;
-    connectcosts[1][0]=1;
-    connectcosts[1][2]=1;
-    connectcosts[1][3]=INFINITY;
-    connectcosts[2][0]=3;  
-    connectcosts[2][1]=1;
-    connectcosts[2][3]=2;
-    connectcosts[3][0]=7;
-    connectcosts[3][1]=INFINITY;
-    connectcosts[3][2]=2;
+    connectcosts[0][1]=4;  
+    connectcosts[0][2]=1;
+    connectcosts[1][0]=4;
+    connectcosts[1][2]=50;
+    connectcosts[2][0]=1;
+    connectcosts[2][1]=50;
     
     nodes = new RouterNode[NUM_NODES];
     for(int i=0;i<NUM_NODES;i++)
@@ -103,22 +97,13 @@ should not have to, and you defeinitely should not have to modify
     /* initialize future link changes */
     if (LINKCHANGES)   {
       evptr = new Event();
-      evptr.evtime =  10000.0;
+      evptr.evtime =  40;
       evptr.evtype =  LINK_CHANGE;
-      evptr.eventity =  0;
-      evptr.rtpktptr =  null;
-      evptr.dest = 3;
-      evptr.cost = 1;
-      insertevent(evptr);
-
-      evptr = new Event();
-      evptr.evtype =  LINK_CHANGE;
-      evptr.evtime =  20000.0;
       evptr.eventity =  0;
       evptr.rtpktptr =  null;
       evptr.dest = 1;
-      evptr.cost = 6;
-      insertevent(evptr);    
+      evptr.cost = 60;
+      insertevent(evptr);
     }
   
   }
@@ -146,8 +131,7 @@ should not have to, and you defeinitely should not have to modify
             myGUI.println(", contents: "+ 
               eventptr.rtpktptr.mincost[0]+" "+ eventptr.rtpktptr.mincost[1]+
 			       " "+
-			       eventptr.rtpktptr.mincost[2]+" "+ 
-			       eventptr.rtpktptr.mincost[3]);
+			       eventptr.rtpktptr.mincost[2]);
             }
           }
       clocktime = eventptr.evtime;    /* update time to next event time */
