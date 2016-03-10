@@ -60,10 +60,7 @@ public class RouterNode {
 
   public void updateLinkCost(int dest, int newcost) {
     costs[dest] = newcost;
-    distanceVector[id][dest] = newcost;
-    route.put(dest, dest);
     System.out.printf("LINK COST CHANGE! %s -> %s now costs %s\n", id, dest, newcost);
-
     broadcastUpdate();
   }
 
@@ -80,22 +77,24 @@ public class RouterNode {
 
       // Does anyone have a cheaper route to node? 
       // Do not check my own DV and only direct neighbors
-      int newCost = RouterSimulator.INFINITY;
-      int throughNode = -1;
+      int cheapest = costs[node];
+      int throughNode = node;
       for( int nbr = 0; nbr < costs.length; ++nbr) {
         if (nbr == id || costs[nbr] == RouterSimulator.INFINITY){
           continue;
         }
         int costThroughNbr = costs[nbr] + distanceVector[nbr][node];  
 
-        if(costThroughNbr < newCost) {
-          newCost = costThroughNbr;
+        if(costThroughNbr < cheapest) {
+          cheapest = costThroughNbr;
           throughNode = nbr;
         }
       }
 
-      if(newCost != distanceVector[id][node]) {
-        distanceVector[id][node] = newCost;
+      // Do we have a new cheapest route to node?
+      if(cheapest != distanceVector[id][node]) {
+        System.out.printf("Updated cost for %s -> %s. Prev cost: %s. New cost: %s. Routes via %s\n", id, node, distanceVector[id][node], cheapest, throughNode);
+        distanceVector[id][node] = cheapest;
         route.put(node, throughNode);
         changes = true;
       }
