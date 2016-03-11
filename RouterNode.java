@@ -12,8 +12,6 @@ public class RouterNode {
   // Route will keep track of which router we route through to get to a neighbor
   private Map<Integer, Integer> route = new HashMap<>();
   private boolean POISONREVERSE = true;
-  private int packagesSent = 0;
-  private int packagesReceived = 0;
 
   public RouterNode(int id, RouterSimulator sim, int[] costs) {
     this.id = id;
@@ -47,13 +45,11 @@ public class RouterNode {
   }
 
   public void recvUpdate(RouterPacket packet) {
-    ++packagesReceived;
     distanceVector[packet.sourceid] = packet.mincost.clone();
     calculateCheapest();
   }
 
   private void sendUpdate(RouterPacket pkt) {
-    ++packagesSent;
     simulator.toLayer2(pkt);
   }
 
@@ -123,7 +119,7 @@ public class RouterNode {
     printHeader();
 
     for(int node = 0; node < costs.length; ++node) {
-      if(node == id || costs[node] == RouterSimulator.INFINITY) continue;
+      if(costs[node] == RouterSimulator.INFINITY) continue;
 
       gui.print(" nbr  " + node + " |");
 
@@ -138,24 +134,22 @@ public class RouterNode {
     gui.println("\nOur distance vector and routes:");
     printHeader();
 
+    gui.println();
     gui.print(String.format(" %7s |", "cost"));
 
     for(int cost : costs) {
       gui.print(String.format("%10s", cost));
     }
-
     gui.println();
+
     gui.print(String.format(" %7s |", "route"));
 
-    for(int cost : distanceVector[id]) {
-      gui.print(String.format("%10d", cost));
+    for(int node = 0; node < costs.length; ++node) {
+      String nextNode = "-";
+      if(route.get(node) != null) 
+        nextNode = Integer.toString(route.get(node));
+      gui.print(String.format("%10s", nextNode));
     }
-
-    gui.println();
-    gui.print(String.format(" %7s | %10d", "recvd", packagesReceived));
-
-    gui.println();
-    gui.print(String.format(" %7s | %10d", "sent", packagesSent));
   }
 
   private void printHeader() {
